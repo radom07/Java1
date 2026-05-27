@@ -59,7 +59,7 @@ public class NestedTwoKeyHashMap<K1, K2, V> implements TwoKeyMap<K1, K2, V> {
     public boolean containsValue(V value) {
         Objects.requireNonNull(value, "Value cannot be null");
 
-        for (Map<K2, V> internalMap : nestedMap.values())
+        for (Map<K2, V> internalMap : this.nestedMap.values())
             if (internalMap.containsValue(value)) {
                 return true;
             }
@@ -132,29 +132,46 @@ public class NestedTwoKeyHashMap<K1, K2, V> implements TwoKeyMap<K1, K2, V> {
                 .flatMap(row -> row.values().stream())
                 .toList();
     }
-    //TODO
+
     @Override
     public void putAll(TwoKeyMap<? extends K1, ? extends K2, ? extends V> other) {
+        Objects.requireNonNull(other, "Other map cannot be null");
 
+        for (Entry<? extends K1, ? extends K2, ? extends V> entry : other) {
+            this.put(entry.getKey1(), entry.getKey2(), entry.getValue());
+        }
     }
 
     @Override
     public void clear() {
-        nestedMap.clear();
+        this.nestedMap.clear();
     }
-    //TODO
+
     @Override
     public Map<K2, V> row(K1 k1) {
         Objects.requireNonNull(k1, "Key1 cannot be null");
 
-        return Map.of();
+        Map<K2, V> internalMap = this.nestedMap.get(k1);
+        if (internalMap == null) {
+            return Collections.emptyMap();
+        }
+        return Collections.unmodifiableMap(internalMap);
     }
-    //TODO
+
     @Override
     public Map<K1, V> column(K2 k2) {
         Objects.requireNonNull(k2, "Key2 cannot be null");
 
-        return Map.of();
+        Map<K1, V> resultMap = new HashMap<>();
+
+        for (Map.Entry<K1, Map<K2, V>> row : this.nestedMap.entrySet()) {
+            K1 k1 = row.getKey();
+            V value = row.getValue().get(k2);
+            if (value != null) {
+                resultMap.put(k1, value);
+            }
+        }
+        return Collections.unmodifiableMap(resultMap);
     }
 
     @Override
@@ -173,9 +190,20 @@ public class NestedTwoKeyHashMap<K1, K2, V> implements TwoKeyMap<K1, K2, V> {
             this.value = value;
         }
 
-        @Override public K1 getKey1() { return key1; }
-        @Override public K2 getKey2() { return key2; }
-        @Override public V getValue() { return value; }
+        @Override
+        public K1 getKey1() {
+            return key1;
+        }
+
+        @Override
+        public K2 getKey2() {
+            return key2;
+        }
+
+        @Override
+        public V getValue() {
+            return value;
+        }
 
         @Override
         public V setValue(V value) {

@@ -16,7 +16,7 @@ public class TestTwoKeyMap {
         grades.put("Alice", "CS", 4);
         try {
             grades.put(null, "CS", 4);
-        }  catch (NullPointerException e) {
+        } catch (NullPointerException e) {
             System.out.println(e.getMessage());
         }
 
@@ -86,7 +86,40 @@ public class TestTwoKeyMap {
         for (TwoKeyMap.Entry<String, String, Integer> entry : grades) {
             System.out.println("Name: " + entry.getKey1() + ", Subject: " + entry.getKey2() + ", Grade: " + entry.getValue());
         }
-//        System.out.println(grades.row("Alice"));           // {Math=5, CS=4}
 
+        System.out.println();
+
+        System.out.println("grades.row(\"Alice\") should be {Math=5, CS=4} >>> " + grades.row("Alice"));
+        System.out.println("grades.row(\"Jack\") should be emptyMap >>> " + grades.row("Jack"));
+
+        System.out.println();
+
+        System.out.println("grades.put(\"Bob\", \"Math\", 4)");
+        grades.put("Bob", "Math", 4);
+        System.out.println("grades.column(\"Math\") should be {Alice=5, Bob=4} >>> " + grades.column("Math"));
+        System.out.println("grades.column(\"Geo\") should be emptyMap >>> " + grades.column("Geo"));
+
+        System.out.println();
+
+        System.out.println("TwoKeyMap<String, String, Integer> otherMap = new NestedTwoKeyHashMap<>()");
+        TwoKeyMap<String, String, Integer> otherMap = new NestedTwoKeyHashMap<>();
+        System.out.println("otherMap.put(\"Sara\", \"Math\", 5)");
+        System.out.println("otherMap.put(\"Sara\", \"CS\", 4)");
+        System.out.println("otherMap.put(\"Albert\", \"Geo\", 3)");
+        otherMap.put("Sara", "Math", 5);
+        otherMap.put("Sara", "CS", 4);
+        otherMap.put("Albert", "Geo", 3);
+        System.out.println("grades.putAll(otherMap)");
+        grades.putAll(otherMap);
+        System.out.println("Set<TwoKeyMap.Entry<String, String, Integer>> mergedMap = grades.entrySet() and sout with forEach");
+        Set<TwoKeyMap.Entry<String, String, Integer>> mergedMap = grades.entrySet();
+        mergedMap.forEach(entry -> System.out.println("Key1: " + entry.getKey1() + ", Key2: " + entry.getKey2() + ", Value: " + entry.getValue()));
+        // można przetestować próbę putAll na mapie z innymi typami i zobaczyć czy poprawnie zadzaiała ? extends
+
+        System.out.println();
+
+        System.out.println("grades.clear()");
+        grades.clear();
+        System.out.println("isEmpty should be \"true\" >>> " + grades.isEmpty());
     }
 }
