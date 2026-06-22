@@ -1,0 +1,29 @@
+1. Dlaczego trzymamy saldo w groszach (long), a nie w PLN (double)?
+Odpowiedź: long, NIE double – zapobiegamy błędom zaokrąglenia
+Typ long to liczba całkowita – operacje na niej są w 100% precyzyjne.
+
+2. Dlaczego blokujemy konta w transfer w porządku rosnącego id, a nie w kolejności from, to?
+Odpowiedź: Jest to technika zapobiegania zakleszczeniom (Lock Ordering).
+Warunkiem koniecznym do wystąpienia deadlocka jest sytuacja, w której dwa wątki próbują zablokować te same dwa zasoby w różnej kolejności.
+Wymuszenie globalnego porządku blokowania (np. zawsze od mniejszego ID do większego) sprawia, że taka sytuacja jest fizycznie niemożliwa
+
+3. Dlaczego synchronized na BankAccount.deposit/withdraw nie wystarcza do bezpiecznego przelewu (musimy zablokować całe transfer)?
+Odpowiedź: Metody deposit i withdraw są atomowe osobno. Jednak przelew składa się z dwóch kroków: pobierz z konta A i dodaj do konta B.
+Jeśli zsynchronizujemy tylko pojedyncze metody, to pomiędzy wykonaniem withdraw(A) a deposit(B) bank znajduje się w stanie niespójnym – pieniądze "wisiałyby w powietrzu".
+Inny wątek sprawdzający sumę sald w tym momencie zauważyłby stratę. Musimy zablokować oba konta na raz, aby cały proces przelewu był niepodzielny (atomowy) z perspektywy innych wątków.
+
+4. Co stałoby się, gdybyśmy użyli AtomicLong jako saldo i prosto getAndAdd(-amount) w wypłacie? (Podpowiedź: brak walidacji „czy stać”.)
+Odpowiedź: Klasy atomowe z pakietu java.util.concurrent.atomic doskonale radzą sobie z prostymi, bezwarunkowymi operacjami matematycznymi
+ale nie posiadają wbudowanej logiki warunkowej typu "zrób coś, jeśli warunek jest spełniony".
+Metoda getAndAdd(-amount) bezwarunkowo odejmie kwotę. Nie potrafi ona sprawdzić przed odjęciem, czy aktualny stan konta jest większy bądź równy wypłacanej kwocie.
+Salda kont w banku zaczęłyby bez przeszkód spadać poniżej zera (debet), ignorując regułę biznesową mówiącą o rzucaniu wyjątku InsufficientFundsException przy braku środków.
+
+5. W wersji z ReentrantLock.tryLock(timeout) – co dzieje się, gdy nie udało się uzyskać locka? Jak system się zachowuje? Czy to jest deadlock?
+Odpowiedź: Gdy minie określony czas (timeout), a blokada jest nadal zajęta przez inny wątek, metoda tryLock zwraca wartość false i wątek nie zostaje zablokowany.
+Wątek zwalnia wtedy blokadę, którą już miał (z pierwszego konta), zasypia na ułamek milisekundy (Thread.sleep(1)) i próbuje całą operację od nowa w pętli while.
+Czy to deadlock? Nie. W definicji deadlocka wątki są zablokowane na zawsze i nie mogą wykonać żadnego kodu.
+Tutaj wątki cały czas żyją, wykonują kod i aktywnie rezygnują z walki o zasób, aby dać szansę innym.
+Zjawisko Livelock: Istnieje tu jednak inne ryzyko – tzw. livelock (żywe zakleszczenie).
+Jeśli dwa wątki będą idealnie w tym samym rytmie blokować pierwsze konto, odbijać się od drugiego, zwalniać pierwsze i próbować znowu
+to aplikacja będzie "mielić procesor", wątki będą aktywne, ale żaden przelew nie dojdzie do skutku.
+Dlatego w technice backoff stosuje się często losowy czas spania (np. losowa liczba milisekund), aby wątki "rozsynchronizowały się" i przestały na siebie wpadać.
